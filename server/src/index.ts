@@ -4,11 +4,13 @@ import { __prod__ } from './constnats';
 import { Post } from './entities/Post';
 import mikroConfig from './mikro-orm.config';
 import express from 'express';
-import { ApolloServer } from 'apollo-server-express';
-// import { ApolloServer } from '@apollo/server';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
 import { buildSchema } from 'type-graphql';
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
+import cors from 'cors';
+import { json } from 'body-parser';
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
@@ -23,12 +25,18 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver],
       validate: false,
     }),
-    context: () => ({ emFork }),
   });
 
   await apolloServer.start();
 
-  apolloServer.applyMiddleware({ app });
+  app.use(
+    '/graphql',
+    cors<cors.CorsRequest>(),
+    json(),
+    expressMiddleware(apolloServer, {
+      context: async () => ({ emFork }),
+    })
+  );
 
   app.listen(4000, () => {
     console.log('server started on localhost:4000');
